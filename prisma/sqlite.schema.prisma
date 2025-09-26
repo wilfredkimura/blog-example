@@ -1,26 +1,15 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Temporary Prisma schema to generate a SQLite-only client for data migration
+// Generate with: npx prisma generate --schema prisma/sqlite.schema.prisma
 
 generator client {
   provider = "prisma-client-js"
-}
-
-model Like {
-  id        String   @id @default(cuid())
-  postId    String
-  userId    String
-  createdAt DateTime @default(now())
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id])
-
-  @@unique([postId, userId])
-  @@index([postId])
+  // Output a separate client so it doesn't conflict with the default Postgres client
+  output   = "../node_modules/@prisma/client-sqlite"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./prisma/dev.db"
 }
 
 /// User roles for access control
@@ -44,7 +33,6 @@ model User {
   sessions Session[]
   posts    Post[]    @relation("AuthorPosts")
   comments Comment[]
-  likes    Like[]
 }
 
 model Account {
@@ -93,7 +81,6 @@ model Post {
   kiswahiliTitle   String?
   kiswahiliContent String?
   published        Boolean  @default(true)
-  likes            Int      @default(0)
 
   // Relations
   authorId   String
@@ -102,7 +89,6 @@ model Post {
   categories PostCategory[]
   tags       PostTag[]
   images     PostImage[]
-  likesList Like[]
 }
 
 model Category {

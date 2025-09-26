@@ -65,6 +65,20 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   return (
     <main className="mx-auto max-w-3xl px-4 py-16">
       <h1 className="text-3xl font-bold">Search</h1>
+      {/* Quick search bar (keeps existing filters) */}
+      <form className="mt-4 flex gap-2" method="get" action="/search">
+        <input type="hidden" name="from" value={from || ""} />
+        <input type="hidden" name="to" value={to || ""} />
+        <input type="hidden" name="sort" value={sortKey} />
+        <input type="hidden" name="page" value="1" />
+        <input
+          name="q"
+          defaultValue={q || ""}
+          placeholder="Search posts..."
+          className="w-full px-3 py-2 border rounded-md"
+        />
+        <button className="px-4 py-2 border rounded-md">Search</button>
+      </form>
       <div className="mt-4">
         <FiltersModal
           actionPath="/search"

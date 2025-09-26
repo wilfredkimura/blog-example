@@ -5,7 +5,8 @@
   --background: #ffffff;
   --foreground: #222223;
   --secondary: #f5f7f9;
-  --accent: #2f80ed;
+  /* Neutralize accent away from blue for consistent buttons */
+  --accent: #8e8e93;
   --nav-bg: #ffffff;
   --nav-fg: #222223;
 }
@@ -17,7 +18,7 @@
   --background: #0f0f14;
   --foreground: #f5f7f9;
   --secondary: #151521;
-  --accent: #6ea8ff;
+  --accent: #8e8e93;
   --nav-bg: #0f0f14;
   --nav-fg: #f5f7f9;
 }
@@ -33,13 +34,40 @@ body {
   background: var(--secondary);
 }
 
+/* Base button normalization: remove default blue buttons and unify look */
+button,
+[type="button"],
+[type="submit"],
+.btn {
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid rgba(39, 35, 67, 0.12);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  line-height: 1.2;
+}
+
+button:hover,
+[type="button"]:hover,
+[type="submit"]:hover,
+.btn:hover {
+  background: color-mix(in oklab, var(--foreground) 6%, var(--background));
+}
+
+button:focus-visible,
+[type="button"]:focus-visible,
+[type="submit"]:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 25%, transparent);
+  outline-offset: 2px;
+}
+
+/* Accent button, now neutral (no blue) */
 .btn-accent {
   background: var(--accent);
-  color: #1a1a1a;
+  color: var(--foreground);
 }
-.btn-accent:hover {
-  filter: brightness(0.95);
-}
+.btn-accent:hover { filter: brightness(0.97); }
 
 .nav {
   background: var(--nav-bg);

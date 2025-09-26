@@ -14,8 +14,10 @@ export default function PostCard({ title, href, date, imageUrl, excerpt }: PostC
     <Link href={href} className="block">
       <article className="card card-hover overflow-hidden">
         {imageUrl && (
-          <div className="relative aspect-[16/9]">
-            <Image src={imageUrl} alt={title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+          <div className="border rounded-lg overflow-hidden">
+            <div className="relative aspect-[16/9]">
+              <Image src={imageUrl} alt={title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+            </div>
           </div>
         )}
         <div className="p-5">

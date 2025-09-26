@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { marked } from "marked";
 
 export default function AdminPostsPage() {
   const [title, setTitle] = useState("");
@@ -29,6 +30,48 @@ export default function AdminPostsPage() {
   const [isDraggingImage, setIsDraggingImage] = useState(false);
   const [isDraggingVideo, setIsDraggingVideo] = useState(false);
   const [isDraggingGallery, setIsDraggingGallery] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Live preview (Stack Overflow-like Markdown preview)
+  const previewHtml = useMemo(() => {
+    try {
+      return marked.parse(content || "");
+    } catch {
+      return content;
+    }
+  }, [content]);
+
+  function surroundSelection(before: string, after: string = before) {
+    const el = contentRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const val = content;
+    const selected = val.slice(start, end);
+    const next = val.slice(0, start) + before + selected + after + val.slice(end);
+    setContent(next);
+    // restore selection around formatted text
+    requestAnimationFrame(() => {
+      const pos = start + before.length + selected.length + after.length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  function insertAtCursor(text: string) {
+    const el = contentRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const val = content;
+    const next = val.slice(0, start) + text + val.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      const pos = start + text.length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -279,13 +322,33 @@ export default function AdminPostsPage() {
           onChange={(e) => setTitle(e.target.value)}
           required
         />
-        <textarea
-          className="w-full px-3 py-2 border rounded-md min-h-[200px]"
-          placeholder="Content (HTML or Markdown)"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          required
-        />
+        {/* Editor Toolbar */}
+        <div className="flex flex-wrap gap-2 text-sm">
+          <button type="button" onClick={() => surroundSelection("**")} title="Bold (Ctrl+B)">B</button>
+          <button type="button" onClick={() => surroundSelection("*") } title="Italic (Ctrl+I)"><em>I</em></button>
+          <button type="button" onClick={() => surroundSelection("`" )} title="Inline code">{`</>`}</button>
+          <button type="button" onClick={() => insertAtCursor("\n```\ncode\n```\n")} title="Code block">Code</button>
+          <button type="button" onClick={() => insertAtCursor("\n> quote\n")} title="Quote">“”</button>
+          <button type="button" onClick={() => insertAtCursor("\n- list item\n")} title="Bulleted list">• List</button>
+          <button type="button" onClick={() => insertAtCursor("\n1. item\n")} title="Numbered list">1. List</button>
+          <button type="button" onClick={() => insertAtCursor("\n### Heading\n")} title="Heading">H3</button>
+          <button type="button" onClick={() => insertAtCursor("\n---\n")} title="Horizontal rule">HR</button>
+          <button type="button" onClick={() => insertAtCursor("\n![alt](https://...)\n")} title="Image">Img</button>
+          <button type="button" onClick={() => insertAtCursor("[text](https://...)" )} title="Link">Link</button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <textarea
+            ref={contentRef}
+            className="w-full px-3 py-2 border rounded-md min-h-[260px] font-mono"
+            placeholder="Write in Markdown. Supports headings, bold/italic, lists, links, images, code blocks."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            required
+          />
+          <div className="w-full px-3 py-2 border rounded-md min-h-[260px] bg-[var(--secondary)] overflow-auto">
+            <div className="prose prose-slate dark:prose-invert" dangerouslySetInnerHTML={{ __html: (previewHtml as string) }} />
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <div className="text-sm font-medium mb-2">Categories</div>
