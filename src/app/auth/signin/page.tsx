@@ -23,7 +23,7 @@ export default function SignInPage() {
   return (
     <main className="mx-auto max-w-md px-4 py-24 text-center">
       <h1 className="text-2xl font-semibold">Sign in</h1>
-      <p className="mt-2 text-sm text-foreground/80">Use email + password or a social provider.</p>
+      <p className="mt-2 text-sm text-foreground/80">Use email + password. Social sign-in is coming soon.</p>
       <form onSubmit={onSubmit} className="mt-6 space-y-3 text-left">
         <input
           name="email"
@@ -49,9 +49,8 @@ export default function SignInPage() {
       <p className="mt-3 text-sm">
         No account? <a className="underline" href="/auth/signup">Create one</a>
       </p>
-      <div className="mt-6 flex flex-col gap-3">
-        <button onClick={() => signIn("google", { callbackUrl: "/" })} className="btn-accent px-4 py-2 rounded-md font-semibold">Sign in with Google</button>
-        <button onClick={() => signIn("twitter", { callbackUrl: "/" })} className="px-4 py-2 rounded-md border font-semibold">Sign in with Twitter</button>
+      <div className="mt-6 text-sm text-foreground/70">
+        Social sign-in (Google, X/Twitter) is coming soon.
       </div>
     </main>
   );
