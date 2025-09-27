@@ -7,6 +7,7 @@ A full‑stack Next.js blog with admin dashboard, categories/tags, search & filt
 - **Tech stack**
 - **Project structure**
 - **Environment variables**
+- **Authentication setup**
 - **Local development (PostgreSQL)**
 - **Content management (Admin)**
 - **Media uploads (Cloudinary)**
@@ -102,6 +103,45 @@ CLOUDINARY_API_SECRET="your_api_secret"
 ```
 If using pooled serverless DBs (e.g., Supabase/Neon), include pooling params as required by your provider.
 
+You can also copy the template at `env.example.txt` and fill in your values. On Render, set these in your Web Service dashboard. See `render.yaml` for IaC configuration.
+
+---
+
+## Authentication setup
+
+This project uses NextAuth with credentials (email/password) and optional Google and Twitter OAuth. Key files:
+
+- `src/lib/auth.ts` – NextAuth configuration (providers, callbacks, `NEXTAUTH_SECRET`, `ADMIN_EMAILS`).
+- `src/app/api/auth/[...nextauth]/route.ts` – NextAuth API route.
+- `src/components/providers/AuthProvider.tsx` – wraps app with `SessionProvider`.
+- `src/app/auth/signin/page.tsx` – Sign in (credentials + optional OAuth buttons).
+- `src/app/auth/signup/page.tsx` – Sign up (email/password).
+- `src/middleware.ts` – protects `/admin/:path*` (requires login). Role checks happen in API routes.
+
+Required environment variables (production):
+
+- `DATABASE_URL` – Postgres connection string.
+- `NEXTAUTH_URL` – base URL of the site (e.g., `https://<your-service>.onrender.com`).
+- `NEXTAUTH_SECRET` – a long random string.
+
+Optional variables:
+
+- `ADMIN_EMAILS` – comma-separated list promoted to ADMIN on login.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` – enable Google OAuth.
+- `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` – enable Twitter OAuth.
+
+OAuth redirect URLs (configure in provider consoles):
+
+- Google: `https://<your-service>.onrender.com/api/auth/callback/google`
+- Twitter: `https://<your-service>.onrender.com/api/auth/callback/twitter`
+
+Local testing checklist:
+
+1. Add `.env` with `DATABASE_URL`, `NEXTAUTH_URL=http://localhost:3000`, `NEXTAUTH_SECRET`, optional `ADMIN_EMAILS` and provider keys.
+2. Run `npm ci`, `npx prisma migrate dev`, `npx prisma generate`, then `npm run dev`.
+3. Visit `/auth/signup` to create an account, then `/auth/signin` to log in.
+4. If your email is in `ADMIN_EMAILS`, confirm admin access to admin APIs/pages.
+
 ---
 
 ## Local development (PostgreSQL)
@@ -184,14 +224,18 @@ This reads from SQLite and upserts into Postgres, preserving IDs and relations.
 - Note: Local filesystem is ephemeral on Vercel—use Cloudinary for all media.
 
 ### Render (Node Web Service)
-- Set env vars as above.
-- Build Command:
+- Prefer using the included `render.yaml` (Infrastructure-as-Code). It provisions a Postgres database, wires `DATABASE_URL`, and sets build/start commands.
+- Set env vars as above (in the Web Service dashboard): `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, optional `ADMIN_EMAILS`, OAuth keys, and `CLOUDINARY_*`.
+- Build Command (matches `render.yaml`):
 ```
-npm ci && npx prisma generate && npm run build
+npm ci
+npx prisma generate
+npm run build
 ```
-- Start Command:
+- Start Command (matches `render.yaml`):
 ```
-npx prisma migrate deploy && npx prisma generate && npm run start
+npx prisma migrate deploy
+npm run start
 ```
 - No disk attachment is required since media is in Cloudinary and DB is Postgres.
 

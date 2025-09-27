@@ -15,9 +15,11 @@ export default function NavBar() {
   const role = (session?.user as any)?.role;
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [mounted, setMounted] = useState(false);
 
   // Load categories dynamically so newly added items show up automatically
   useEffect(() => {
+    setMounted(true);
     let alive = true;
     fetch("/api/categories")
       .then((r) => r.json())
@@ -64,18 +66,20 @@ export default function NavBar() {
         </div>
         {/* Right side controls */}
         <div className="flex items-center gap-2 md:gap-3">
-          {session?.user?.name && (
-            <span className="hidden md:inline text-sm text-[var(--nav-fg)]/90">Welcome, {session.user.name}!</span>
+          {mounted && session?.user?.name && (
+            <span className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 max-w-[120px] md:max-w-none truncate" title={`Welcome, ${session.user.name}!`}>
+              Welcome, {session.user.name}!
+            </span>
           )}
-          {session ? (
-            <button onClick={() => signOut({ callbackUrl: "/" })} className="hidden md:inline text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
+          {mounted && (session ? (
+            <button onClick={() => signOut({ callbackUrl: "/" })} className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
               Sign out
             </button>
           ) : (
-            <button onClick={() => signIn()} className="hidden md:inline text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
+            <button onClick={() => signIn()} className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
               Sign in
             </button>
-          )}
+          ))}
           {/* Hamburger */}
           <button
             aria-label="Toggle menu"

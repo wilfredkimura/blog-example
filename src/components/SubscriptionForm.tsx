@@ -24,25 +24,27 @@ export default function SubscriptionForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="w-full max-w-lg mx-auto">
-      <label htmlFor="email" className="block text-sm font-medium mb-2">
-        Subscribe for updates
-      </label>
-      <div className="flex items-center gap-2">
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          required
-          className="flex-1 px-3 py-2 border rounded-md bg-background text-foreground"
-        />
-        <button type="submit" className="btn-accent px-4 py-2 rounded-md font-semibold">
-          Subscribe
-        </button>
-      </div>
-      {status && <p className="mt-2 text-sm">{status}</p>}
-    </form>
+    <div className="w-full max-w-2xl mx-auto card p-5 md:p-6">
+      <form onSubmit={onSubmit} className="w-full">
+        <label htmlFor="email" className="block text-sm font-semibold mb-2">
+          Subscribe for updates
+        </label>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+            className="flex-1 px-3 py-2 border rounded-md bg-background text-foreground"
+          />
+          <button type="submit" className="btn-accent px-4 py-2 rounded-md font-semibold">
+            Subscribe
+          </button>
+        </div>
+        {status && <p className="mt-2 text-sm">{status}</p>}
+      </form>
+    </div>
   );
 }

@@ -62,43 +62,47 @@ export default function Comments({ postId }: { postId: string }) {
   return (
     <section className="mt-10">
       <h2 className="text-xl font-semibold">Comments</h2>
-      {loading ? (
-        <p className="mt-2 text-sm opacity-75">Loading…</p>
-      ) : comments.length === 0 ? (
-        <p className="mt-2 text-sm opacity-75">Be the first to comment.</p>
-      ) : (
-        <ul className="mt-4 space-y-4">
-          {comments.map((c) => (
-            <li key={c.id} className="border rounded-md p-3">
-              <div className="text-sm opacity-75 mb-1">
-                <span className="font-medium">{c.author || "Anonymous"}</span> · {new Date(c.date).toLocaleString()}
-              </div>
-              <p className="whitespace-pre-wrap leading-relaxed">{c.content}</p>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mt-4 card p-4 md:p-5">
+        {loading ? (
+          <p className="text-sm opacity-75">Loading…</p>
+        ) : comments.length === 0 ? (
+          <p className="text-sm opacity-75">Be the first to comment.</p>
+        ) : (
+          <ul className="space-y-3">
+            {comments.map((c) => (
+              <li key={c.id} className="border rounded-md p-3">
+                <div className="text-sm opacity-75 mb-1">
+                  <span className="font-medium">{c.author || "Anonymous"}</span> · {new Date(c.date).toLocaleString()}
+                </div>
+                <p className="whitespace-pre-wrap leading-relaxed">{c.content}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-2">
-        <input
-          type="text"
-          placeholder="Your name (optional)"
-          className="w-full px-3 py-2 border rounded-md"
-          value={author}
-          onChange={(e) => setAuthor(e.target.value)}
-        />
-        <textarea
-          placeholder="Write your comment…"
-          className="w-full px-3 py-2 border rounded-md min-h-[120px]"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          required
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button disabled={submitting} className="btn-accent px-4 py-2 rounded-md font-semibold">
-          {submitting ? "Posting…" : "Post Comment"}
-        </button>
-      </form>
+      <div className="mt-4 card p-4 md:p-5">
+        <form onSubmit={onSubmit} className="space-y-2">
+          <input
+            type="text"
+            placeholder="Your name (optional)"
+            className="w-full px-3 py-2 border rounded-md"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+          />
+          <textarea
+            placeholder="Write your comment…"
+            className="w-full px-3 py-2 border rounded-md min-h-[120px]"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            required
+          />
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button disabled={submitting} className="btn-accent px-4 py-2 rounded-md font-semibold">
+            {submitting ? "Posting…" : "Post Comment"}
+          </button>
+        </form>
+      </div>
     </section>
   );
 }

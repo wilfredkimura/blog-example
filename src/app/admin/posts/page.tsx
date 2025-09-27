@@ -22,7 +22,7 @@ export default function AdminPostsPage() {
   const [gallery, setGallery] = useState<string[]>([]);
   // Per-file progress for multi-upload (keyed by index)
   const [galleryProgress, setGalleryProgress] = useState<Record<string, number>>({});
-  const [posts, setPosts] = useState<Array<{ id: string; title: string; published: boolean; date: string; content?: string | null; categories?: { categoryId: string }[]; tags?: { tagId: string }[] }>>([]);
+  const [posts, setPosts] = useState<Array<{ id: string; title: string; published: boolean; date: string; content?: string | null; imageUrl?: string | null; videoUrl?: string | null; categories?: { categoryId: string }[]; tags?: { tagId: string }[] }>>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -73,6 +73,102 @@ export default function AdminPostsPage() {
     });
   }
 
+  // Make a readable alt text from a URL's filename
+  function altFromUrl(url: string) {
+    try {
+      const last = url.split("/").pop() || "image";
+      const name = last.replace(/\.[a-zA-Z0-9]+$/, "");
+      const pretty = name.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+      return pretty || "image";
+    } catch {
+      return "image";
+    }
+  }
+
+  // Drag & Drop helpers between gallery and cover, and reorder within gallery
+  // Toast notifications
+  const [toasts, setToasts] = useState<Array<{ id: string; text: string }>>([]);
+  function showToast(text: string) {
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    setToasts((prev) => [...prev, { id, text }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 2500);
+  }
+
+  function onThumbDragStart(e: React.DragEvent, url: string, idx: number) {
+    e.dataTransfer.setData(
+      "application/json",
+      JSON.stringify({ type: "gallery", url, idx })
+    );
+    e.dataTransfer.effectAllowed = "move";
+  }
+  function onCoverDragStart(e: React.DragEvent) {
+    if (!imageUrl) return;
+    e.dataTransfer.setData(
+      "application/json",
+      JSON.stringify({ type: "cover", url: imageUrl })
+    );
+    e.dataTransfer.effectAllowed = "move";
+  }
+  function parseDnD(e: React.DragEvent): null | { type: string; url: string; idx?: number } {
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  function onCoverDragOver(e: React.DragEvent) {
+    const data = parseDnD(e);
+    if (!data) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+  function onCoverDrop(e: React.DragEvent) {
+    const data = parseDnD(e);
+    if (!data) return;
+    e.preventDefault();
+    if (data.type === "gallery") {
+      // Promote gallery image to cover
+      setImageUrl(data.url);
+      setGallery((prev) => prev.filter((_, i) => i !== (data.idx ?? -1)));
+      showToast("Promoted image to cover");
+    }
+  }
+  function onThumbDragOver(e: React.DragEvent) {
+    const data = parseDnD(e);
+    if (!data) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+  function onThumbDrop(e: React.DragEvent, targetIdx: number) {
+    const data = parseDnD(e);
+    if (!data) return;
+    e.preventDefault();
+    if (data.type === "gallery") {
+      const from = data.idx ?? -1;
+      if (from === -1 || from === targetIdx) return;
+      setGallery((prev) => {
+        const copy = [...prev];
+        const [item] = copy.splice(from, 1);
+        copy.splice(targetIdx, 0, item);
+        return copy;
+      });
+    } else if (data.type === "cover" && imageUrl) {
+      // Demote cover into gallery at target position
+      const cover = imageUrl;
+      setImageUrl("");
+      setGallery((prev) => {
+        const copy = [...prev];
+        copy.splice(targetIdx, 0, cover);
+        return copy;
+      });
+      showToast("Demoted cover into gallery");
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus(null);
@@ -83,7 +179,7 @@ export default function AdminPostsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isEdit
-            ? { id: editingId, title, content, published, images: gallery, categories: selectedCategories, tags: selectedTags }
+            ? { id: editingId, title, content, published, imageUrl: imageUrl || null, videoUrl: videoUrl || null, images: gallery, categories: selectedCategories, tags: selectedTags }
             : {
                 title,
                 content,
@@ -234,6 +330,28 @@ export default function AdminPostsPage() {
     }
   }
 
+  async function removePhoto(url: string, where: "cover" | "gallery", index?: number) {
+    const ok = window.confirm("Remove this image? This will delete the uploaded file if applicable.");
+    if (!ok) return;
+    try {
+      if (url.startsWith("/uploads/")) {
+        await deleteUploaded(url);
+      }
+    } finally {
+      if (where === "cover") {
+        setImageUrl("");
+        showToast("Removed cover image");
+      } else if (where === "gallery") {
+        if (typeof index === "number") {
+          setGallery((prev) => prev.filter((_, i) => i !== index));
+        } else {
+          setGallery((prev) => prev.filter((u) => u !== url));
+        }
+        showToast("Removed image from gallery");
+      }
+    }
+  }
+
   async function handleGalleryUpload(files: FileList | File[] | null) {
     if (!files || (files instanceof FileList && files.length === 0)) return;
     const list: File[] = files instanceof FileList ? Array.from(files) : files;
@@ -314,6 +432,7 @@ export default function AdminPostsPage() {
       {loadError && (
         <div className="p-3 rounded-md border bg-red-50 text-red-700 text-sm">{loadError}</div>
       )}
+      <div className="card p-4 md:p-6">
       <form onSubmit={onSubmit} className="space-y-3">
         <input
           className="w-full px-3 py-2 border rounded-md"
@@ -511,13 +630,33 @@ export default function AdminPostsPage() {
               ))}
             </div>
           )}
-          {/* Thumbnails with reorder/delete */}
+          {/* Thumbnails with reorder/delete and quick actions (drag to reorder; drop onto cover to promote) */}
           {gallery.length > 0 && (
             <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
               {gallery.map((url, idx) => (
-                <div key={url + idx} className="border rounded-md p-1 flex flex-col items-center gap-1">
-                  <img src={url} alt="gallery" className="h-20 w-full object-cover rounded" />
-                  <div className="flex gap-2">
+                <div
+                  key={url + idx}
+                  className="border rounded-md p-1 flex flex-col items-center gap-1"
+                  draggable
+                  onDragStart={(e) => onThumbDragStart(e, url, idx)}
+                  onDragOver={onThumbDragOver}
+                  onDrop={(e) => onThumbDrop(e, idx)}
+                >
+                  <div className="relative w-full">
+                    <img src={url} alt="gallery" className="h-20 w-full object-cover rounded" />
+                    {imageUrl && url === imageUrl && (
+                      <span className="absolute top-1 left-1 bg-[var(--accent)] text-white text-[10px] px-2 py-0.5 rounded-full shadow">Cover</span>
+                    )}
+                    <button
+                      type="button"
+                      title="Delete photo"
+                      className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1"
+                      onClick={() => removePhoto(url, "gallery", idx)}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 3h6a1 1 0 0 1 1 1v2h5v2h-2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8H3V6h5V4a1 1 0 0 1 1-1Zm1 3h4V5h-4v1Zm-3 3v11h10V9H7Zm2 2h2v7H9v-7Zm4 0h2v7h-2v-7Z"/></svg>
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-center">
                     <button type="button" className="text-xs underline" disabled={idx === 0} onClick={() => {
                       if (idx === 0) return;
                       setGallery((prev) => {
@@ -536,11 +675,14 @@ export default function AdminPostsPage() {
                         return copy;
                       });
                     }}>Down</button>
-                    <button type="button" className="text-xs underline text-red-600" onClick={async () => {
-                      const url = gallery[idx];
-                      setGallery((prev) => prev.filter((_, i) => i !== idx));
-                      await deleteUploaded(url);
-                    }}>Remove</button>
+                    <button type="button" className="text-xs underline" disabled={imageUrl === url} onClick={() => {
+                      setImageUrl(url);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}>Use as cover</button>
+                    <button type="button" className="text-xs underline" title="Insert image markdown at cursor" onClick={() => {
+                      insertAtCursor(`\n\n![${altFromUrl(url)}](${url})\n\n`);
+                    }}>Insert</button>
+                    <button type="button" className="text-xs underline text-red-600" onClick={() => removePhoto(url, "gallery", idx)}>Remove</button>
                   </div>
                 </div>
               ))}
@@ -550,9 +692,23 @@ export default function AdminPostsPage() {
         {(imageUrl || videoUrl) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {imageUrl && (
-              <div>
+              <div
+                onDragOver={onCoverDragOver}
+                onDrop={onCoverDrop}
+                className="border rounded-md p-2"
+              >
                 <div className="text-sm font-medium mb-1">Image preview</div>
-                <img src={imageUrl} alt="preview" className="max-h-40 rounded-md object-cover border" />
+                <img
+                  src={imageUrl}
+                  alt="preview"
+                  className="max-h-40 rounded-md object-cover border"
+                  draggable
+                  onDragStart={onCoverDragStart}
+                />
+                <div className="mt-2 flex gap-3">
+                  <button type="button" className="text-xs underline" onClick={() => insertAtCursor(`\n\n![${altFromUrl(imageUrl)}](${imageUrl})\n\n`)}>Insert cover into content</button>
+                  <button type="button" className="text-xs underline text-red-600" onClick={() => removePhoto(imageUrl, "cover")}>Remove cover image</button>
+                </div>
               </div>
             )}
             {videoUrl && (
@@ -587,8 +743,9 @@ export default function AdminPostsPage() {
         </div>
         {status && <p className="text-sm mt-2">{status}</p>}
       </form>
+      </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 card p-4 md:p-6">
         <h2 className="text-xl font-semibold">Existing Posts</h2>
         {loading ? (
           <p className="text-sm">Loading…</p>
@@ -623,6 +780,8 @@ export default function AdminPostsPage() {
                         setSelectedCategories((p.categories || []).map((c) => c.categoryId));
                         setSelectedTags((p.tags || []).map((t) => t.tagId));
                         setGallery((p as any).images?.map((im: any) => im.url) || []);
+                        setImageUrl((p as any).imageUrl || "");
+                        setVideoUrl((p as any).videoUrl || "");
                       }}>Edit</button>
                       <button className="underline text-red-600" onClick={() => deletePost(p.id)}>Delete</button>
                     </td>

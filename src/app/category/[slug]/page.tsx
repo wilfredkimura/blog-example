@@ -1,8 +1,11 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import FiltersModal from "@/components/FiltersModal";
-import Image from "next/image";
 import LikeButton from "@/components/LikeButton";
+import PostCard from "@/components/PostCard";
+import Pagination from "@/components/Pagination";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 interface Params { slug: string }
 
@@ -63,11 +66,33 @@ export default async function CategoryPage({ params, searchParams }: { params: P
           orderBy,
           take,
           skip,
-          select: { id: true, title: true, date: true, imageUrl: true, content: true, likes: true, _count: { select: { comments: true } } },
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            imageUrl: true,
+            content: true,
+            likes: true,
+            _count: { select: { comments: true } },
+            categories: { select: { category: { select: { name: true } } } },
+            tags: { select: { tag: { select: { name: true } } } },
+          },
         }),
         prisma.post.count({ where: whereBase }),
       ])
     : [[], 0];
+
+  // Determine which of these posts the current user has liked
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id as string | undefined;
+  let likedSet = new Set<string>();
+  if (userId && (posts as any[]).length) {
+    const likes = await prisma.like.findMany({
+      where: { userId, postId: { in: (posts as any[]).map((p) => p.id) } },
+      select: { postId: true },
+    });
+    likedSet = new Set(likes.map((l) => l.postId));
+  }
 
   const makeHref = (newPage: number) => {
     const sp = new URLSearchParams();
@@ -100,47 +125,30 @@ export default async function CategoryPage({ params, searchParams }: { params: P
           ]}
         />
       </div>
-      <ul className="mt-6 space-y-4">
-        {posts.map((p: { id: string; title: string; date: Date; imageUrl: string | null; content: string; likes: number; _count: { comments: number } }) => {
-          const words = (p.content || "").trim().split(/\s+/).filter(Boolean).length;
-          const minutes = Math.max(1, Math.ceil(words / 200));
+      <div className="mt-6 grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {posts.map((p: { id: string; title: string; date: Date; imageUrl: string | null; content: string; likes: number; _count: { comments: number }; categories: { category: { name: string } }[]; tags: { tag: { name: string } }[] }) => {
+          const excerpt = (p.content || "").slice(0, 160);
+          const catNames = (p.categories || []).map((c) => c.category.name);
+          const tagNames = (p.tags || []).map((t) => t.tag.name);
           return (
-            <li key={p.id} className="flex gap-4">
-              {p.imageUrl && (
-                <Link href={`/posts/${p.id}`} className="shrink-0 w-40 border rounded-lg overflow-hidden block">
-                  <div className="relative aspect-[16/9]">
-                    <Image src={p.imageUrl} alt={p.title} fill className="object-cover" sizes="160px" />
-                  </div>
-                </Link>
-              )}
-              <div className="min-w-0">
-                <Link className="underline font-semibold" href={`/posts/${p.id}`}>
-                  {p.title}
-                </Link>
-                <div className="mt-1 text-xs text-foreground/70 flex items-center gap-2">
-                  <time>{new Date(p.date).toLocaleDateString()}</time>
-                  <span>•</span>
-                  <span>{minutes} min read</span>
-                  <span>•</span>
-                  <span>{p._count.comments} comments</span>
-                </div>
-                <div className="mt-2">
-                  <LikeButton postId={p.id} initialLikes={p.likes ?? 0} />
-                </div>
+            <div key={p.id}>
+              <PostCard
+                title={p.title}
+                href={`/posts/${p.id}`}
+                date={p.date.toISOString()}
+                imageUrl={p.imageUrl || undefined}
+                excerpt={excerpt}
+                categories={catNames}
+                tags={tagNames}
+              />
+              <div className="mt-2">
+                <LikeButton postId={p.id} initialLikes={p.likes ?? 0} initialLiked={likedSet.has(p.id)} />
               </div>
-            </li>
+            </div>
           );
         })}
-      </ul>
-      <div className="mt-6 flex items-center justify-between text-sm">
-        <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={!hasPrev}>
-          {hasPrev ? <Link href={makeHref(pageNum - 1)}>Previous</Link> : <span>Previous</span>}
-        </button>
-        <span>Page {pageNum}{total ? ` of ${Math.max(1, Math.ceil(total / take))}` : ""}</span>
-        <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={!hasNext}>
-          {hasNext ? <Link href={makeHref(pageNum + 1)}>Next</Link> : <span>Next</span>}
-        </button>
       </div>
+      <Pagination page={pageNum} totalPages={Math.max(1, Math.ceil(total / take))} makeHref={makeHref} />
       {!category && <p className="mt-4 text-foreground/60">No such category yet.</p>}
     </main>
   );

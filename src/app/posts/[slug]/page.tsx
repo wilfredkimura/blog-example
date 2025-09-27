@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { marked } from "marked";
 import Comments from "@/components/Comments";
 import LikeButton from "@/components/LikeButton";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 interface Params { slug: string }
 
@@ -29,21 +31,53 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
     },
   });
   if (!post) return notFound();
+  // Determine if current user has liked this post
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id as string | undefined;
+  let initialLiked = false;
+  if (userId) {
+    const like = await prisma.like.findUnique({ where: { postId_userId: { postId: post.id, userId } }, select: { id: true } });
+    initialLiked = !!like;
+  }
   const base = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const shareUrl = `${base}/posts/${slug}`;
   const html = typeof post.content === "string" && post.content.trim().length
     ? marked.parse(post.content)
     : "";
   return (
-    <main className="mx-auto max-w-3xl px-4 py-16">
-      <h1 className="text-3xl font-bold">{post.title}</h1>
-      <p className="mt-2 text-sm text-foreground/70">
-        {new Date(post.date).toLocaleDateString()} {post.author?.name ? `• ${post.author.name}` : ""}
-      </p>
-      <div className="mt-3">
-        <LikeButton postId={post.id} initialLikes={(post as any).likes ?? 0} />
-      </div>
-      <div className="mt-4 flex items-center gap-3">
+    <main className="mx-auto max-w-4xl px-4 py-10">
+      {/* Hero header */}
+      <section className="overflow-hidden rounded-2xl border relative">
+        {post.imageUrl && (
+          <div className="relative aspect-[21/9]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={post.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/30 to-transparent" />
+          </div>
+        )}
+        <div className="p-6 md:p-8">
+          <time className="text-[11px] uppercase tracking-wide text-foreground/60">{new Date(post.date).toLocaleDateString()}</time>
+          <h1 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">{post.title}</h1>
+          <p className="mt-1 text-sm text-foreground/70">{post.author?.name ? post.author.name : ""}</p>
+          <div className="mt-3">
+            <LikeButton postId={post.id} initialLikes={(post as any).likes ?? 0} initialLiked={initialLiked} />
+          </div>
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {post.categories.map((c) => (
+              <span key={c.categoryId} className="text-xs px-2 py-1 rounded-full border">{c.category.name}</span>
+            ))}
+            {post.tags.map((t) => (
+              <span key={t.tagId} className="text-xs px-2 py-1 rounded-full border">#{t.tag.name}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Content */}
+      <article className="mt-8 card p-5 md:p-6 prose prose-slate dark:prose-invert" dangerouslySetInnerHTML={{ __html: html as string }} />
+
+      {/* Share */}
+      <div className="mt-6 card p-4 flex items-center gap-3">
         <a
           className="inline-flex items-center justify-center w-9 h-9 border rounded hover:bg-foreground/5"
           href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`}
@@ -84,11 +118,6 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
           </svg>
         </a>
       </div>
-      {post.imageUrl && (
-        <div className="mt-6 border rounded-lg overflow-hidden"><img src={post.imageUrl} alt="" className="w-full" /></div>
-      )}
-      <article className="mt-6 prose prose-slate dark:prose-invert" dangerouslySetInnerHTML={{ __html: html as string }} />
-
       {/* Comments */}
       <Comments postId={post.id} />
     </main>

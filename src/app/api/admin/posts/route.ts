@@ -102,7 +102,7 @@ export async function PATCH(req: Request) {
   }
   try {
     const body = await req.json();
-    const { id, title, content, published, images, categories, tags } = body || {};
+    const { id, title, content, published, images, categories, tags, imageUrl, videoUrl } = body || {};
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
     const updated = await prisma.post.update({
       where: { id: String(id) },
@@ -110,6 +110,8 @@ export async function PATCH(req: Request) {
         ...(title != null ? { title: String(title) } : {}),
         ...(content != null ? { content: String(content) } : {}),
         ...(published != null ? { published: !!published } : {}),
+        ...(imageUrl !== undefined ? { imageUrl: imageUrl as string | null } : {}),
+        ...(videoUrl !== undefined ? { videoUrl: videoUrl as string | null } : {}),
       },
       select: { id: true },
     });

@@ -15,23 +15,27 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // If already liked, return current count without increment
+    // Toggle like: if exists -> unlike, else -> like
     const existing = await prisma.like.findUnique({
       where: { postId_userId: { postId: id, userId } },
       select: { id: true },
     });
     if (existing) {
-      const current = await prisma.post.findUnique({ where: { id }, select: { likes: true } });
-      return NextResponse.json({ likes: current?.likes ?? 0, liked: true });
+      const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await tx.like.delete({ where: { postId_userId: { postId: id, userId } } });
+        const updated = await tx.post.update({ where: { id }, data: { likes: { decrement: 1 } }, select: { likes: true } });
+        // Defensive clamp to 0
+        return Math.max(0, updated.likes);
+      });
+      return NextResponse.json({ likes: result, liked: false });
+    } else {
+      const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await tx.like.create({ data: { postId: id, userId } });
+        const updated = await tx.post.update({ where: { id }, data: { likes: { increment: 1 } }, select: { likes: true } });
+        return updated.likes;
+      });
+      return NextResponse.json({ likes: result, liked: true });
     }
-
-    // Create like and increment in a transaction
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      await tx.like.create({ data: { postId: id, userId } });
-      const updated = await tx.post.update({ where: { id }, data: { likes: { increment: 1 } }, select: { likes: true } });
-      return updated.likes;
-    });
-    return NextResponse.json({ likes: result, liked: true });
   } catch (e: any) {
     return NextResponse.json({ error: "Unable to like post" }, { status: 400 });
   }
