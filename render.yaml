@@ -7,15 +7,11 @@ services:
     autoDeploy: true
 
     # Ensure DATABASE_URL is available at build time for Prisma Client generation
-    buildCommand: |
-      npm ci
-      npx prisma generate
-      npm run build
+    buildCommand: sh -c "npm ci && npx prisma generate && npm run build"
 
     # Run migrations on boot, then start Next.js
     startCommand: |
-      npx prisma migrate deploy
-      npm run start
+      npx prisma migrate deploy && npm run start
 
     # Health check
     healthCheckPath: /
