@@ -2,8 +2,13 @@ services:
   - type: web
     name: blog-example
     env: node
-    buildCommand: sh -c "npm ci && npx prisma generate && npm run build"
-    startCommand: sh -c "npx prisma migrate deploy && npm run start"
+    buildCommand: |
+      npm ci
+      npx prisma generate
+      npm run build
+    startCommand: |
+      npx prisma migrate deploy
+      npm run start
     envVars:
       - key: NODE_ENV
         value: production
