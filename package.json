@@ -1,10 +1,11 @@
 {
+  "$schema": "https://json.schemastore.org/package.json",
   "name": "blog-example",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "seed": "node prisma/seed.js",
