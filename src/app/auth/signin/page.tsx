@@ -1,13 +1,34 @@
 "use client";
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useState, type FormEvent, type ChangeEvent, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const params = useSearchParams();
 
-  async function onSubmit(e: React.FormEvent) {
+  // Show OAuth errors that are appended as ?error=...
+  useEffect(() => {
+    const e = params.get("error");
+    if (!e) return;
+    const map: Record<string, string> = {
+      OAuthSignin: "There was a problem initiating the sign-in. Please try again.",
+      OAuthCallback: "The provider rejected the sign-in. Check app settings.",
+      OAuthCreateAccount: "Could not create your account via the provider.",
+      EmailCreateAccount: "Could not create your email account.",
+      CallbackRouteError: "Callback handling error.",
+      OAuthAccountNotLinked: "This email is already used with a different login method. Sign in with that method.",
+      CredentialsSignin: "Invalid email or password.",
+      AccessDenied: "Access denied.",
+      Configuration: "Auth is misconfigured. Check environment variables and provider settings.",
+      Default: "Sign-in failed. Please try again.",
+    };
+    setErr(map[e] || map.Default);
+  }, [params]);
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
     const res = await signIn("credentials", {
@@ -23,14 +44,14 @@ export default function SignInPage() {
   return (
     <main className="mx-auto max-w-md px-4 py-24 text-center">
       <h1 className="text-2xl font-semibold">Sign in</h1>
-      <p className="mt-2 text-sm text-foreground/80">Use email + password. Social sign-in is coming soon.</p>
+      <p className="mt-2 text-sm text-foreground/80">Use email + password or continue with a social provider.</p>
       <form onSubmit={onSubmit} className="mt-6 space-y-3 text-left">
         <input
           name="email"
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
           className="w-full px-3 py-2 border rounded-md"
           required
         />
@@ -39,7 +60,7 @@ export default function SignInPage() {
           type="password"
           placeholder="Password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
           className="w-full px-3 py-2 border rounded-md"
           required
         />
@@ -49,8 +70,9 @@ export default function SignInPage() {
       <p className="mt-3 text-sm">
         No account? <a className="underline" href="/auth/signup">Create one</a>
       </p>
-      <div className="mt-6 text-sm text-foreground/70">
-        Social sign-in (Google, X/Twitter) is coming soon.
+      <div className="mt-6 flex flex-col gap-3">
+        <button onClick={() => signIn("twitter", { callbackUrl: "/" })} className="btn-accent px-4 py-2 rounded-md font-semibold">Continue with X / Twitter</button>
+        <button onClick={() => signIn("google", { callbackUrl: "/" })} className="px-4 py-2 rounded-md border font-semibold">Continue with Google</button>
       </div>
     </main>
   );

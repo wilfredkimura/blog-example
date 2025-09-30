@@ -4,7 +4,7 @@ import TwitterProvider from "next-auth/providers/twitter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
 import prisma from "@/lib/prisma";
-import { compare, hash } from "bcryptjs";
+import { compare } from "bcryptjs";
 
 const providers: NextAuthOptions["providers"] = [];
 
@@ -38,24 +38,6 @@ providers.push(
     async authorize(credentials) {
       if (!credentials?.email || !credentials?.password) return null;
       const email = String(credentials.email).toLowerCase();
-
-      // Temporary default admin fallback for bootstrapping access
-      if (email === "admin@example.com" && String(credentials.password) === "12345678") {
-        let user = await prisma.user.findUnique({ where: { email } });
-        const passwordHash = await hash("12345678", 10);
-        if (!user) {
-          user = await prisma.user.create({
-            data: { email, name: "Admin", role: "ADMIN" as any, passwordHash },
-          });
-        } else {
-          // Ensure role and password are set for consistency
-          user = await prisma.user.update({
-            where: { email },
-            data: { role: "ADMIN" as any, passwordHash },
-          });
-        }
-        return { id: user.id, name: user.name ?? "Admin", email } as any;
-      }
 
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user?.passwordHash) return null;
