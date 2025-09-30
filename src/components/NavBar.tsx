@@ -12,73 +12,94 @@ const staticLinks = [
 
 export default function NavBar() {
   const { user } = useUser();
-  const role = (user?.publicMetadata as any)?.role;
+  const [role, setRole] = useState<string | null>(null);
+  const [authSource, setAuthSource] = useState<"clerk" | "cred" | null>(null);
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [mounted, setMounted] = useState(false);
 
-  // Load categories dynamically so newly added items show up automatically
   useEffect(() => {
     setMounted(true);
     let alive = true;
     fetch("/api/categories")
       .then((r) => r.json())
-      .then((data) => {
-        if (!alive) return;
-        setCategories(Array.isArray(data.categories) ? data.categories : []);
-      })
+      .then((d) => { if (alive) setCategories(d.categories || []); })
       .catch(() => {});
-    return () => {
-      alive = false;
-    };
+    // fetch current user role from server
+    fetch("/api/me")
+      .then((r) => r.ok ? r.json() : { role: null, source: null })
+      .then((d) => { if (alive) { setRole(d?.role ?? null); setAuthSource(d?.source ?? null); } })
+      .catch(() => {});
+    return () => { alive = false; };
   }, []);
 
   const slugify = (s: string) =>
     s
       .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-");
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
 
-  const categoryLinks = categories.map((c) => ({ href: `/category/${slugify(c.name)}`, label: c.name }));
-  const links = [{ href: "/", label: "Home" }, ...categoryLinks, ...staticLinks];
   return (
-    <nav className="sticky top-0 z-50 w-full bg-[var(--nav-bg)]/90 backdrop-blur border-b">
+    <nav className="border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container py-3 flex items-center justify-between">
         <Link href="/" className="text-[var(--nav-fg)] font-semibold tracking-tight text-lg">
           Unveiling Truth
         </Link>
+
         {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-6">
-          {links.map((l) => (
+        <div className="hidden md:flex items-center gap-3 md:gap-4">
+          {staticLinks.map((l) => (
             <Link key={l.href} href={l.href} className="text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
               {l.label}
             </Link>
           ))}
-          {role === "ADMIN" && (
-            <Link href="/admin" className="text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
-              Admin
+          {categories.map((c) => (
+            <Link key={c.id} href={`/category/${slugify(c.name)}`} className="text-sm text-[var(--nav-fg)]/70 hover:opacity-90">
+              {c.name}
             </Link>
+          ))}
+          {role === "ADMIN" && (
+            <>
+              <Link href="/admin" className="text-sm text-[var(--nav-fg)]/90 hover:opacity-80">Admin</Link>
+              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30">Admin</span>
+            </>
           )}
-          <Link href="#subscribe" className="hidden lg:inline-block btn-accent px-4 py-2 rounded-full text-xs font-semibold">
+          <Link href="#subscribe" className="btn-accent px-4 py-2 rounded-full text-xs font-semibold">
             Subscribe
           </Link>
         </div>
-        {/* Right side controls */}
+
+        {/* Right controls */}
         <div className="flex items-center gap-2 md:gap-3">
           {mounted && user?.firstName && (
-            <span className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 max-w-[120px] md:max-w-none truncate" title={`Welcome, ${user.firstName}!`}>
+            <span className="hidden md:inline text-xs md:text-sm text-[var(--nav-fg)]/90 max-w-[160px] truncate" title={`Welcome, ${user.firstName}!`}>
               Welcome, {user.firstName}!
             </span>
           )}
+          {/* Clerk controls */}
           <SignedIn>
             <UserButton appearance={{ elements: { userButtonBox: "text-[var(--nav-fg)]" } }} />
           </SignedIn>
           <SignedOut>
             <SignInButton mode="modal">
-              <button className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80">Sign in</button>
+              <button className="hidden md:inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80">Sign in</button>
             </SignInButton>
           </SignedOut>
+          {/* DB credentials controls */}
+          {authSource === "cred" ? (
+            <button
+              className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80"
+              onClick={async () => { await fetch("/api/cred/logout", { method: "POST" }); window.location.reload(); }}
+            >
+              Sign out (DB)
+            </button>
+          ) : (
+            <Link href="/auth/cred" className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
+              DB Login
+            </Link>
+          )}
           {/* Hamburger */}
           <button
             aria-label="Toggle menu"
@@ -94,23 +115,32 @@ export default function NavBar() {
           </button>
         </div>
       </div>
+
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden border-t bg-[var(--nav-bg)] text-[var(--nav-fg)]">
-          <div className="container py-4 flex flex-col gap-4">
-            {links.map((l) => (
-              <Link key={l.href} href={l.href} className="text-base" onClick={() => setOpen(false)}>
-                {l.label}
-              </Link>
-            ))}
-            {role === "ADMIN" && (
-              <Link href="/admin" className="text-base" onClick={() => setOpen(false)}>
-                Admin
-              </Link>
-            )}
+        <div className="md:hidden border-t">
+          <div className="container py-3 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              {staticLinks.map((l) => (
+                <Link key={l.href} href={l.href} className="text-base" onClick={() => setOpen(false)}>
+                  {l.label}
+                </Link>
+              ))}
+              {categories.map((c) => (
+                <Link key={c.id} href={`/category/${slugify(c.name)}`} className="text-base" onClick={() => setOpen(false)}>
+                  {c.name}
+                </Link>
+              ))}
+              {role === "ADMIN" && (
+                <Link href="/admin" className="text-base" onClick={() => setOpen(false)}>
+                  Admin
+                </Link>
+              )}
+            </div>
             <div className="flex items-center gap-3 pt-2">
-              {user?.firstName && (
-                <span className="text-sm">Welcome, {user.firstName}!</span>
+              {user?.firstName && <span className="text-sm">Welcome, {user.firstName}!</span>}
+              {role === "ADMIN" && (
+                <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30">Admin</span>
               )}
               <Link href="#subscribe" className="btn-accent px-4 py-2 rounded-full text-xs font-semibold" onClick={() => setOpen(false)}>
                 Subscribe

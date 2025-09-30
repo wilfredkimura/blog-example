@@ -21,6 +21,7 @@
     "@tailwindcss/postcss": "^4",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
+    "jsonwebtoken": "^9.0.2",
     "marked": "^12.0.2",
     "next": "15.5.4",
     "next-auth": "^4.24.11",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
