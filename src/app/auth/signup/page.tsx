@@ -1,7 +1,9 @@
 "use client";
+import { useSignUp } from "@clerk/nextjs";
 import { useState } from "react";
 
 export default function SignUpPage() {
+  const { isLoaded, signUp, setActive } = useSignUp();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -9,21 +11,33 @@ export default function SignUpPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isLoaded) return;
     setStatus(null);
     try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name }),
+      const result = await signUp.create({
+        emailAddress: email,
+        password,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to sign up");
-      setStatus("Account created. You can sign in now.");
-      setEmail("");
-      setPassword("");
-      setName("");
-    } catch (err: any) {
-      setStatus(err.message);
+      // Optionally set first name via update
+      if (name) {
+        try { await signUp.update({ firstName: name }); } catch {}
+      }
+      // Prepare email verification (if enabled in Clerk dashboard)
+      try {
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        setStatus("Verification code sent to your email. Please verify.");
+      } catch {
+        // If verification not required, complete sign-up
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          window.location.href = "/";
+        } else {
+          setStatus("Account created. You can sign in now.");
+        }
+      }
+    } catch (e: any) {
+      const msg = e?.errors?.[0]?.message || "Failed to sign up";
+      setStatus(msg);
     }
   }
 
@@ -58,7 +72,7 @@ export default function SignUpPage() {
           minLength={8}
           required
         />
-        <button className="btn-accent px-4 py-2 rounded-md font-semibold w-full" type="submit">Create account</button>
+        <button disabled={!isLoaded} className="btn-accent px-4 py-2 rounded-md font-semibold w-full" type="submit">Create account</button>
         {status && <p className="text-sm mt-2">{status}</p>}
       </form>
       <p className="mt-3 text-sm text-center">

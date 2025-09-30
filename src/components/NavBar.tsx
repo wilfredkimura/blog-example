@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useSession, signIn, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { SignedIn, SignedOut, UserButton, useUser, SignInButton } from "@clerk/nextjs";
 
 const staticLinks = [
   { href: "/archives", label: "Archives" },
@@ -11,8 +11,8 @@ const staticLinks = [
 ];
 
 export default function NavBar() {
-  const { data: session } = useSession();
-  const role = (session?.user as any)?.role;
+  const { user } = useUser();
+  const role = (user?.publicMetadata as any)?.role;
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [mounted, setMounted] = useState(false);
@@ -66,20 +66,19 @@ export default function NavBar() {
         </div>
         {/* Right side controls */}
         <div className="flex items-center gap-2 md:gap-3">
-          {mounted && session?.user?.name && (
-            <span className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 max-w-[120px] md:max-w-none truncate" title={`Welcome, ${session.user.name}!`}>
-              Welcome, {session.user.name}!
+          {mounted && user?.firstName && (
+            <span className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 max-w-[120px] md:max-w-none truncate" title={`Welcome, ${user.firstName}!`}>
+              Welcome, {user.firstName}!
             </span>
           )}
-          {mounted && (session ? (
-            <button onClick={() => signOut({ callbackUrl: "/" })} className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
-              Sign out
-            </button>
-          ) : (
-            <button onClick={() => signIn()} className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80">
-              Sign in
-            </button>
-          ))}
+          <SignedIn>
+            <UserButton appearance={{ elements: { userButtonBox: "text-[var(--nav-fg)]" } }} />
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="inline text-xs md:text-sm text-[var(--nav-fg)]/90 hover:opacity-80">Sign in</button>
+            </SignInButton>
+          </SignedOut>
           {/* Hamburger */}
           <button
             aria-label="Toggle menu"
@@ -110,17 +109,20 @@ export default function NavBar() {
               </Link>
             )}
             <div className="flex items-center gap-3 pt-2">
-              {session?.user?.name && (
-                <span className="text-sm">Welcome, {session.user.name}!</span>
+              {user?.firstName && (
+                <span className="text-sm">Welcome, {user.firstName}!</span>
               )}
               <Link href="#subscribe" className="btn-accent px-4 py-2 rounded-full text-xs font-semibold" onClick={() => setOpen(false)}>
                 Subscribe
               </Link>
-              {session ? (
-                <button onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }); }} className="text-sm opacity-90 hover:opacity-100">Sign out</button>
-              ) : (
-                <button onClick={() => { setOpen(false); signIn(); }} className="text-sm opacity-90 hover:opacity-100">Sign in</button>
-              )}
+              <SignedIn>
+                <UserButton appearance={{ elements: { userButtonBox: "text-[var(--nav-fg)]" } }} />
+              </SignedIn>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button onClick={() => setOpen(false)} className="text-sm opacity-90 hover:opacity-100">Sign in</button>
+                </SignInButton>
+              </SignedOut>
             </div>
           </div>
         </div>

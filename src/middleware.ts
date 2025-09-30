@@ -1,8 +1,12 @@
-export { default } from "next-auth/middleware";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-// Protect these routes with authentication. Role checks happen server-side in routes.
+export default clerkMiddleware();
+
 export const config = {
   matcher: [
-    "/admin/:path*",
+    // Skip Next.js internals and static files
+    "/((?!_next|[^?]*\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API routes
+    "/(api|trpc)(.*)",
   ],
 };

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Open_Sans } from "next/font/google";
 import "./globals.css";
-import AuthProvider from "../components/providers/AuthProvider";
+import { ClerkProvider } from "@clerk/nextjs";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 
@@ -30,14 +30,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${openSans.className} ${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${openSans.className} ${geistSans.variable} ${geistMono.variable} antialiased`}>
           <NavBar />
           {children}
           <Footer />
-        </AuthProvider>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -1,8 +1,9 @@
-import NextAuth from "next-auth";
-import { authOptions } from "@/lib/auth";
-
 export const runtime = "nodejs";
 
-const handler = NextAuth(authOptions);
+export async function GET() {
+  return new Response("NextAuth is disabled. Use Clerk.", { status: 410 });
+}
 
-export { handler as GET, handler as POST };
+export async function POST() {
+  return new Response("NextAuth is disabled. Use Clerk.", { status: 410 });
+}
