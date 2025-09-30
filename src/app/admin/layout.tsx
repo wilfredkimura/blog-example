@@ -1,13 +1,19 @@
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
-import prisma from "@/lib/prisma";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { ensureDbUser } from "@/lib/ensureDbUser";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const { userId } = await auth();
   if (!userId) redirect("/auth/signin");
-  const dbUser = await prisma.user.upsert({ where: { id: userId }, update: {}, create: { id: userId } });
+  const cu = await currentUser();
+  const dbUser = await ensureDbUser(userId, {
+    email: cu?.emailAddresses?.[0]?.emailAddress ?? null,
+    firstName: cu?.firstName ?? null,
+    lastName: cu?.lastName ?? null,
+    username: (cu as any)?.username ?? null,
+  });
   if (dbUser.role !== "ADMIN") redirect("/auth/signin");
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8 grid grid-cols-12 gap-6">

@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { ensureDbUser } from "@/lib/ensureDbUser";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -13,11 +14,13 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Ensure a corresponding User exists in our database for FK relations
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {},
-      create: { id: userId },
+    // Ensure DB user exists with email/name and possible ADMIN promotion
+    const user = await currentUser();
+    await ensureDbUser(userId, {
+      email: user?.emailAddresses?.[0]?.emailAddress ?? null,
+      firstName: user?.firstName ?? null,
+      lastName: user?.lastName ?? null,
+      username: (user as any)?.username ?? null,
     });
 
     // Toggle like: if exists -> unlike, else -> like
