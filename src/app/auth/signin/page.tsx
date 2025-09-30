@@ -1,9 +1,9 @@
 "use client";
 import { signIn } from "next-auth/react";
-import { useState, type FormEvent, type ChangeEvent, useEffect } from "react";
+import { useState, type FormEvent, type ChangeEvent, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function SignInPage() {
+function SignInContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -75,5 +75,13 @@ export default function SignInPage() {
         <button onClick={() => signIn("google", { callbackUrl: "/" })} className="px-4 py-2 rounded-md border font-semibold">Continue with Google</button>
       </div>
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInContent />
+    </Suspense>
   );
 }
