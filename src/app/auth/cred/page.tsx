@@ -1,8 +1,16 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function CredLoginPage() {
+  return (
+    <Suspense fallback={<div className="container max-w-sm mx-auto py-16">Loading…</div>}>
+      <CredLoginForm />
+    </Suspense>
+  );
+}
+
+function CredLoginForm() {
   const router = useRouter();
   const search = useSearchParams();
   const redirect = search.get("redirect") || "/";
@@ -27,7 +35,6 @@ export default function CredLoginPage() {
         setLoading(false);
         return;
       }
-      // Success: reload or redirect
       router.push(redirect);
       router.refresh();
     } catch (e: any) {
