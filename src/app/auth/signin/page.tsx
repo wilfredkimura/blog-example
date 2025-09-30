@@ -16,7 +16,9 @@ function SignInContent() {
       const result = await signIn.create({ identifier: email, password });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        window.location.href = "/";
+        const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+        const redirectTo = params.get("redirect") || "/";
+        window.location.href = redirectTo;
       } else {
         setErr("Additional steps required to sign in.");
       }

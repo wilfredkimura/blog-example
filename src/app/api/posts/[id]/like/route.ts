@@ -1,7 +1,6 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -9,11 +8,17 @@ export const runtime = "nodejs";
 export async function POST(_: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id as string | undefined;
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Ensure a corresponding User exists in our database for FK relations
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId },
+    });
 
     // Toggle like: if exists -> unlike, else -> like
     const existing = await prisma.like.findUnique({

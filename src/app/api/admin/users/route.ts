@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  if (role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const dbUser = await prisma.user.upsert({ where: { id: userId }, update: {}, create: { id: userId } });
+  if (dbUser.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -26,11 +24,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  if (role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const dbUser = await prisma.user.upsert({ where: { id: userId }, update: {}, create: { id: userId } });
+  if (dbUser.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const { email, name, role: newRole, password } = await req.json();
     if (!email || typeof email !== "string" || !email.includes("@")) {
@@ -58,11 +55,10 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  if (role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const dbUser = await prisma.user.upsert({ where: { id: userId }, update: {}, create: { id: userId } });
+  if (dbUser.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
     const { userId, role: newRole } = await req.json();
@@ -77,11 +73,10 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  if (role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const dbUser = await prisma.user.upsert({ where: { id: userId }, update: {}, create: { id: userId } });
+  if (dbUser.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

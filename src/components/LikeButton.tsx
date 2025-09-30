@@ -1,6 +1,5 @@
 "use client";
 import { useState, useTransition } from "react";
-import { signIn } from "next-auth/react";
 
 export default function LikeButton({ postId, initialLikes = 0, initialLiked = false }: { postId: string; initialLikes?: number; initialLiked?: boolean }) {
   const [likes, setLikes] = useState(initialLikes);
@@ -13,8 +12,9 @@ export default function LikeButton({ postId, initialLikes = 0, initialLiked = fa
       try {
         const res = await fetch(`/api/posts/${postId}/like`, { method: "POST" });
         if (res.status === 401) {
-          // Not signed in – redirect to sign in and come back
-          await signIn(undefined, { callbackUrl: typeof window !== "undefined" ? window.location.href : "/" });
+          // Not signed in – redirect to our Clerk sign-in page and come back
+          const current = typeof window !== "undefined" ? window.location.href : "/";
+          window.location.href = `/auth/signin?redirect=${encodeURIComponent(current)}`;
           return;
         }
         if (!res.ok) throw new Error("Failed to like");
