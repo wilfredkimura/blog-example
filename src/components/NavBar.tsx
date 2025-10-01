@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, UserButton, useUser, SignInButton } from "@clerk/nextjs";
+import Image from "next/image";
+import logo from "../../logo.jpg";
 
 const staticLinks = [
   { href: "/archives", label: "Archives" },
@@ -44,8 +46,18 @@ export default function NavBar() {
   return (
     <nav className="border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container py-3 flex items-center justify-between">
-        <Link href="/" className="text-[var(--nav-fg)] font-semibold tracking-tight text-lg">
-          Unveiling Truth
+        <Link href="/" className="flex items-center gap-2 group">
+          <Image
+            src={logo}
+            alt="LUCAS KIMANTHI logo"
+            width={28}
+            height={28}
+            className="rounded-sm shadow-sm"
+            priority
+          />
+          <span className="text-[var(--nav-fg)] font-semibold tracking-tight text-lg group-hover:opacity-90">
+            LUCAS KIMANTHI
+          </span>
         </Link>
 
         {/* Desktop links */}

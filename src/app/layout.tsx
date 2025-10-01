@@ -5,6 +5,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
+import logo from "../../logo.jpg";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,9 +20,14 @@ const geistMono = Geist_Mono({
 const openSans = Open_Sans({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-open-sans" });
 
 export const metadata: Metadata = {
-  title: "Unveiling Truth, Advocating Justice",
+  title: "LUCAS KIMANTHI",
   description:
-    "Independent analysis on Kenya's politics and human rights: elections, governance, corruption, police brutality, gender equality, land rights, youth activism, and more.",
+    "Official site of Lucas Kimanthi: commentary, analysis, and updates.",
+  icons: {
+    icon: logo.src,
+    shortcut: logo.src,
+    apple: logo.src,
+  },
 };
 
 export default function RootLayout({
